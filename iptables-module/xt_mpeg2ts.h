@@ -9,6 +9,14 @@
  * Free Software Foundation.
  *
  */
+ 
+ /*
+ *
+ * Définition d'un flag permettant d'indiquer les paquets à matcher
+ * Les différents éléments permettant de déterminer le match sont dans l'enum
+ * présent un peu plus loin.
+ *
+ */
 #ifndef _LINUX_NETFILTER_XT_MPEG2TS_MATCH_H
 #define _LINUX_NETFILTER_XT_MPEG2TS_MATCH_H 1
 
@@ -26,7 +34,16 @@
 static char version[] =
 	XT_MODULE_NAME ".c:v" XT_MODULE_VERSION	\
 	" (part of " PACKAGE_NAME ")";
-
+	
+	
+/*
+ * enum contient les paramètres permettant de déterminer les différents champs du flag
+ * 1 << n numéro du champ
+ * Ici Le champ format peut prendre 4 possibilités 
+ * Les flags douvent être d'une longueur fixe
+ * Celle-ci est défini dans la structure xt_ipaddr_mtinfo
+ */
+ 
 enum {
 	XT_MPEG2TS_DETECT_DROP = 1 << 0,
 	XT_MPEG2TS_MAX_STREAMS = 1 << 1,
