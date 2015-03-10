@@ -107,14 +107,28 @@ MODULE_PARM_DESC(msg_level, "Message level bit mask");
 
 /* Possibility to compile out print statements, this was used when
  * profiling the code.
+ *
+ * Logiquement utilisé pour les prints de debug
+ * Décommentation des 3 lignes suivantes
+ #define NO_MSG_CODE 1 
+ #undef DEBUG 
+ #define DEBUG 1 
+ *
+ * et commentation des 3 lignes
+ #ifdef NO_MSG_CODE
+ #undef DEBUG
+ #endif
+ *
  */
-/* #define NO_MSG_CODE 1 */
-/* #undef DEBUG */
-/* #define DEBUG 1 */
 
-#ifdef NO_MSG_CODE
+ #define NO_MSG_CODE 1 
+ #undef DEBUG 
+ #define DEBUG 1 
+
+/*#ifdef NO_MSG_CODE
 #undef DEBUG
 #endif
+*/
 
 #ifdef DEBUG
 #define msg_dbg(TYPE, f, a...)						\
@@ -813,7 +827,9 @@ conn_htable_destroy(struct xt_rule_mpeg2ts_conn_htable *ht)
 
 
 /*
- * Keeping dynamic allocated memory when the rulesets are swapped.
+ * 
+ 
+ Keeping dynamic allocated memory when the rulesets are swapped.
  *
  * Iptables rule updates works by replacing the entire ruleset.  Our
  * dynamic allocated data (per rule) needs to survive this update, BUT
@@ -1129,7 +1145,13 @@ get_rtp_header_length(const unsigned char *payload_ptr, uint16_t payload_len)
 	return *payload_ptr == 0x80 ? 12 : 0;
 }
 
-
+/*
+ * Structure définie dans linux/netfilter/x_tables.h
+ *
+ * Structure de base définissant le match
+ *
+ */
+ 
 static bool
 xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 {
@@ -1196,7 +1218,9 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 	}
 	ulen = ntohs(uh->len);
 
-	/* How much do we need to skip to access payload data */
+	/* How much do we need to skip to access payload data 
+	 * Drop du header udp
+	 */
 	udp_hdr_size = par->thoff + sizeof(struct udphdr);
 	payload_ptr = skb_network_header(skb) + udp_hdr_size;
 	/* payload_ptr = skb->data + udp_hdr_size; */
@@ -1218,6 +1242,8 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 		msg_dbg(RX_STATUS, "skb(0x%p) NOT cloned", skb);
 */
 
+/* Drop du en-tête rtp ici */
+
 	format = info->flags & XT_MPEG2TS_FORMAT;
 	if (format == XT_MPEG2TS_FORMAT_AUTO || format == XT_MPEG2TS_FORMAT_RTP) {
 		rtp_hdr_size = get_rtp_header_length(payload_ptr, payload_len);
@@ -1225,6 +1251,7 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 			if (format == XT_MPEG2TS_FORMAT_RTP)
 				return false;
 		} else {
+/*
 			payload_ptr += rtp_hdr_size;
 			payload_len -= rtp_hdr_size;
 		}
@@ -1249,6 +1276,12 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 
 	return res;
 }
+
+/*
+ * Structure d'initialisation (__read_mostly)
+ * 
+ */
+
 
 static struct xt_match mpeg2ts_mt_reg __read_mostly = {
 	.name       = "mpeg2ts",
