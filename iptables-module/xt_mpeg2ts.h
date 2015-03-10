@@ -60,6 +60,7 @@ enum {
 /* Details of this hash structure is hidden in kernel space xt_mpeg2ts.c */
 struct xt_rule_mpeg2ts_conn_htable;
 
+
 struct mpeg2ts_cfg {
 
 	/* Hash table setup */
@@ -68,6 +69,12 @@ struct mpeg2ts_cfg {
 	__u32 max_list;	/* warn if list searches exceed this number */
 };
 
+
+/*
+ * struct xt_mpeg2ts à a voir avec le flag défini au dessus
+ * Comment ??
+ * 
+ */
 
 struct xt_mpeg2ts_mtinfo {
 	__u16 flags;
