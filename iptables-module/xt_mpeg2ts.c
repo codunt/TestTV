@@ -15,8 +15,10 @@
 
 #include <linux/ip.h>
 #include <linux/udp.h>
-#include <linux/module.h>
-#include <linux/skbuff.h>
+#include <linux/module.h> //Needed by static struct xt_match mpeg2ts_mt_reg __read_mostly (lg 1300)
+#include <linux/skbuff.h> //Needed by skb in the match function - voir book “Understanding Linux Network Internals” section 4.1
+(author?)
+[LinuxNetInt].
 #include <linux/version.h>
 #include <linux/netfilter/x_tables.h>
 
@@ -39,7 +41,7 @@ MODULE_DESCRIPTION("Detecting packet drops in MPEG2 Transport Streams (TS)");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(XT_MODULE_VERSION);
 MODULE_ALIAS("ipt_mp2t");
-MODULE_ALIAS("ipt_mpeg2ts");
+MODULE_ALIAS("ipt_mpeg2ts"); //Alias requis pour le chargement automatique du module
 
 /* COMPAT trick: Kernel >= 3.8.0
  *   commit b67bfe0d42: hlist: drop the node parameter from iterators
@@ -697,7 +699,11 @@ mpeg2ts_stream_alloc_init(struct xt_rule_mpeg2ts_conn_htable *ht,
  * The xt_mpeg2ts_mt_check() / checkentry, return type logic differs
  * between kernel versions.  Fortunately the compat_xtables
  * module/system handles the different cases.
+ *
+ *Régles additionelles de match (voir structure statique xt_match ipaddr_mt_reg __read_mostly lg 1300)
+ *
  */
+ 
 static int
 xt_mpeg2ts_mt_check(const struct xt_mtchk_param *par)
 {
@@ -1147,16 +1153,17 @@ get_rtp_header_length(const unsigned char *payload_ptr, uint16_t payload_len)
 
 /*
  * Structure définie dans linux/netfilter/x_tables.h
- *
- * Structure de base définissant le match
+ * Fonction de base définissant le match
+ * Paramètre de la structure xt_action_param - Défini ou ???
+ * Paramètre structure sk_buff *skb -Buffer contenant les paquets à analyser 
  *
  */
  
 static bool
 xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 {
-	const struct xt_mpeg2ts_mtinfo *info = par->matchinfo;
-	const struct iphdr *iph = ip_hdr(skb);
+	const struct xt_mpeg2ts_mtinfo *info = par->matchinfo; //Data copied from userspace
+	const struct iphdr *iph = ip_hdr(skb); //Return pointeur au début de la stack IP
 	const struct udphdr *uh;
 	struct udphdr _udph;
 	__be32 saddr, daddr;
@@ -1288,14 +1295,19 @@ static struct xt_match mpeg2ts_mt_reg __read_mostly = {
 	.name       = "mpeg2ts", //name of the match
 	.revision   = 0, //integer used for versioning
 	.family     = NFPROTO_IPV4, //type of processing - ip_tables
-	.match      = xt_mpeg2ts_match,
-	.checkentry = xt_mpeg2ts_mt_check,
-	.destroy    = xt_mpeg2ts_mt_destroy,
+	.match      = xt_mpeg2ts_match, //Appel lorsque un paquet est transmis au module
+	.checkentry = xt_mpeg2ts_mt_check, //Allow match in more than one table or more protocol (check the checkentry function lg700) Appel au passage de la règle
+	.destroy    = xt_mpeg2ts_mt_destroy, //Appel lorsque la rêgle est supprimé
 	.proto      = IPPROTO_UDP, //limite le match au paquets udp
-	.matchsize  = sizeof(struct xt_mpeg2ts_mtinfo),
-	.me         = THIS_MODULE,
+	.matchsize  = sizeof(struct xt_mpeg2ts_mtinfo), //Size of the private structure
+	.me         = THIS_MODULE, //Used by the kernel module infrastructure
 };
 
+/*
+ *In a sample module, do a printk inside xt_mpeg2ts_mt_check 
+ *& pr_info inside xt_mpeg2ts_mt_destroy
+ *
+ */
 
 /*** Proc seq_file functionality ***/
 
@@ -1474,11 +1486,12 @@ static const struct file_operations dl_file_ops = {
 	.release = seq_release
 };
 
-/*** Module init & exit ***/
-
+// Module initialisation 
 static int __init mpeg2ts_mt_init(void)
 {
 	int err;
+	
+	//?? Gestions de régles multiples ??
 	GLOBAL_ID = 1; /* Module counter for rule_id assignments */
 
 	/* The list conn_htables contain references to dynamic
@@ -1492,7 +1505,9 @@ static int __init mpeg2ts_mt_init(void)
 	msg_dbg(DRV, "Message level (msg_level): 0x%X", msg_level);
 
 	/* Register the mpeg2ts matches */
-	err = xt_register_match(&mpeg2ts_mt_reg);
+	err = xt_register_match(&mpeg2ts_mt_reg); //NEEDED call register_match point the struct
+	
+//Gestions des erreurs :
 	if (err) {
 		msg_err(DRV, "unable to register matches");
 		return err;
@@ -1508,17 +1523,18 @@ static int __init mpeg2ts_mt_init(void)
 		err = -ENOMEM;
 	}
 #endif
-
-	return err;
+//Fonctionnement "standard :
+	return err; //Return of the call
 }
 
+//Module exit 
 static void __exit mpeg2ts_mt_exit(void)
 {
 	msg_info(DRV, "Unloading: %s", version);
 
-	remove_proc_entry(XT_MODULE_NAME, init_net.proc_net);
+	remove_proc_entry(XT_MODULE_NAME, init_net.proc_net); //?? Remove du process -non documenté dans les modules standard 
 
-	xt_unregister_match(&mpeg2ts_mt_reg);
+	xt_unregister_match(&mpeg2ts_mt_reg); //Déenregistrement standard du module 
 
 	/* Its important to wait for all call_rcu_bh() callbacks to
 	 * finish before this module is deallocated as the code
@@ -1530,6 +1546,6 @@ static void __exit mpeg2ts_mt_exit(void)
 	 */
 	rcu_barrier_bh();
 }
-
+//Appel réel du module ((fonction éxécuté a l'appel du fichier) correspond au "main")
 module_init(mpeg2ts_mt_init);
 module_exit(mpeg2ts_mt_exit);
