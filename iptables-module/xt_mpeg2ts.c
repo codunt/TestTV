@@ -1279,18 +1279,19 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 
 /*
  * Structure d'initialisation (__read_mostly)
- * 
+ *Userspace & kernelspace doivent être défini avec les mêmes noms, revision, famille d'adresses, taille 
+ *
  */
 
 
 static struct xt_match mpeg2ts_mt_reg __read_mostly = {
-	.name       = "mpeg2ts",
-	.revision   = 0,
-	.family     = NFPROTO_IPV4,
+	.name       = "mpeg2ts", //name of the match
+	.revision   = 0, //integer used for versioning
+	.family     = NFPROTO_IPV4, //type of processing - ip_tables
 	.match      = xt_mpeg2ts_match,
 	.checkentry = xt_mpeg2ts_mt_check,
 	.destroy    = xt_mpeg2ts_mt_destroy,
-	.proto      = IPPROTO_UDP,
+	.proto      = IPPROTO_UDP, //limite le match au paquets udp
 	.matchsize  = sizeof(struct xt_mpeg2ts_mtinfo),
 	.me         = THIS_MODULE,
 };
