@@ -13,8 +13,8 @@
  *
  */
 
-#include <linux/ip.h>
-#include <linux/udp.h>
+#include <linux/ip.h> //Needed in static bool match pour lire le header IP
+#include <linux/udp.h> //Needed in static bool match pour lire le header UDP
 #include <linux/module.h> //Needed by static struct xt_match mpeg2ts_mt_reg __read_mostly (lg 1300)
 #include <linux/skbuff.h> //Needed by skb in the match function - voir book “Understanding Linux Network Internals” section 4.1
 (author?)
@@ -1163,15 +1163,15 @@ static bool
 xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 {
 	const struct xt_mpeg2ts_mtinfo *info = par->matchinfo; //Data copied from userspace
-	const struct iphdr *iph = ip_hdr(skb); //Return pointeur au début de la stack IP
-	const struct udphdr *uh;
-	struct udphdr _udph;
-	__be32 saddr, daddr;
-	uint16_t ulen;
-	uint16_t format;
-	uint16_t udp_hdr_size;
-	uint16_t rtp_hdr_size;
-	uint16_t payload_len;
+	const struct iphdr *iph = ip_hdr(skb); //Return pointeur au début de la stack IP sur la struct header ip
+	const struct udphdr *uh; //Définition de la structure header udp
+	struct udphdr _udph; 
+	__be32 saddr, daddr; //Variables du header IP
+	uint16_t ulen;		//\
+	uint16_t format;	//\
+	uint16_t udp_hdr_size;	// Variables header UDP
+	uint16_t rtp_hdr_size;	///
+	uint16_t payload_len;	///
 	const unsigned char *payload_ptr;
 
 	bool res = true;
@@ -1187,9 +1187,22 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 	/*
 	if (!pskb_may_pull((struct sk_buff *)skb, sizeof(struct udphdr)))
 		return false;
+	
+	*
+	* Extrait du de la structure défini dans le header ip.h
+	* les autres infos dispos sont :
+  	* __u8    tos;
+ 	* __be16  tot_len;
+ 	* __be16  id;
+	* __be16  frag_off;
+ 	* __u8    ttl;
+	* __u8    protocol;
+	* __sum16 check;
+	* __be32  saddr;
+	* __be32  daddr;
 	*/
-
-	saddr = iph->saddr;
+	
+	saddr = iph->saddr; 
 	daddr = iph->daddr;
 
 	/* Must not be a fragment. */
@@ -1213,7 +1226,8 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 			return false;
 		}
 	}
-
+	
+	//Affecte le header udp a la variable uh
 	uh = skb_header_pointer(skb, par->thoff, sizeof(_udph), &_udph);
 	if (unlikely(uh == NULL)) {
 		/* Something is wrong, cannot even access the UDP
@@ -1223,10 +1237,9 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 		par->hotdrop = true;
 		return false;
 	}
-	ulen = ntohs(uh->len);
+	ulen = ntohs(uh->len); //Récupération de la length udp
 
 	/* How much do we need to skip to access payload data 
-	 * Drop du header udp
 	 */
 	udp_hdr_size = par->thoff + sizeof(struct udphdr);
 	payload_ptr = skb_network_header(skb) + udp_hdr_size;
@@ -1251,9 +1264,9 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 
 /* Drop du en-tête rtp ici */
 
-	format = info->flags & XT_MPEG2TS_FORMAT;
+	format = info->flags & XT_MPEG2TS_FORMAT; //Flag le format du rtp
 	if (format == XT_MPEG2TS_FORMAT_AUTO || format == XT_MPEG2TS_FORMAT_RTP) {
-		rtp_hdr_size = get_rtp_header_length(payload_ptr, payload_len);
+		rtp_hdr_size = get_rtp_header_length(payload_ptr, payload_len); //Appel de la fonction défini a la lg 1150
 		if (!rtp_hdr_size) {
 			if (format == XT_MPEG2TS_FORMAT_RTP)
 				return false;
@@ -1284,13 +1297,13 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 	return res;
 }
 
+
+
 /*
  * Structure d'initialisation (__read_mostly)
  *Userspace & kernelspace doivent être défini avec les mêmes noms, revision, famille d'adresses, taille 
  *
  */
-
-
 static struct xt_match mpeg2ts_mt_reg __read_mostly = {
 	.name       = "mpeg2ts", //name of the match
 	.revision   = 0, //integer used for versioning
