@@ -287,24 +287,24 @@ struct pid_data_t {
 
 /* Data to match a stream / connection */
 struct mpeg2ts_stream_match { /* Like xt_hashlimit: dsthash_dst */
-	__be32 dst_addr; /* MC addr first */
-	__be32 src_addr;
-	__be16 dst_port;
+	__be32 dst_addr; /* Mac addr first */
+	__be32 src_addr; 
+	__be16 dst_port; /* Ip addr second */
 	__be16 src_port;
 };
 
 /* Hash entry with info about the mpeg2ts stream / connection */
 struct mpeg2ts_stream { /* Like xt_hashlimit: dsthash_ent */
 	/* Place static / read-only parts in the beginning */
-	struct hlist_node node;
-	struct mpeg2ts_stream_match match;
+	struct hlist_node node; //??
+	struct mpeg2ts_stream_match match; //appel du match
 
 	/* PID list with last CC value (not updated too often) */
-	int pid_list_len;
-	struct list_head pid_list;
+	int pid_list_len; //nombre de processus
+	struct list_head pid_list; //struct in linux/types.h (pointer next and previous)
 
 	/* For RCU-protected deletion */
-	struct rcu_head rcu_head;
+	struct rcu_head rcu_head; //??
 
 	/* Place highly modified members after the next cache line */
 
@@ -1030,16 +1030,16 @@ dissect_mpeg2ts(const unsigned char *payload_ptr, uint16_t payload_len,
 	int skips_total = 0;
 	int discontinuity = 0;
 	const struct iphdr *iph = ip_hdr(skb);
-
-	struct mpeg2ts_stream     *stream; /* "Connection" */
-	struct mpeg2ts_stream_match match;
+	
+	struct mpeg2ts_stream     *stream; /* "Connection" voir lg 297 */
+	struct mpeg2ts_stream_match match; // Data to match a stream / connection (src-dest address) voir lg 289 
 
 	struct xt_rule_mpeg2ts_conn_htable *hinfo;
 	hinfo = info->hinfo;
 
 	/** Lookup stream data structures **/
 
-	/* Fill in the match struct */
+	/* Fill in the match struct - variable connues */
 	memset(&match, 0, sizeof(match)); /* Worried about struct padding */
 	match.src_addr = iph->saddr;
 	match.dst_addr = iph->daddr;
@@ -1048,7 +1048,7 @@ dissect_mpeg2ts(const unsigned char *payload_ptr, uint16_t payload_len,
 
 	/* spin_lock_bh(&hinfo->lock); // Replaced by RCU */
 	rcu_read_lock_bh();
-
+	
 	stream = mpeg2ts_stream_find(hinfo, &match);
 	if (!stream) {
 		stream = mpeg2ts_stream_alloc_init(hinfo, &match);
@@ -1242,7 +1242,7 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 	/* How much do we need to skip to access payload data 
 	 */
 	udp_hdr_size = par->thoff + sizeof(struct udphdr);
-	payload_ptr = skb_network_header(skb) + udp_hdr_size;
+	payload_ptr = skb_network_header(skb) + udp_hdr_size; //Pointeir sur la charge utile après le header udp
 	/* payload_ptr = skb->data + udp_hdr_size; */
 	BUG_ON(payload_ptr != (skb->data + udp_hdr_size));
 
@@ -1252,7 +1252,7 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 	  payload_len = ntohs(iph->tot_len)- udp_hdr_size;
 	  payload_len = ulen - sizeof(struct udphdr);
 	*/
-	payload_len = skb->len - udp_hdr_size;
+	payload_len = skb->len - udp_hdr_size; // len - hdr_udp
 
 /* Not sure if we need to clone packets
 	if (skb_shared(skb))
@@ -1262,12 +1262,12 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 		msg_dbg(RX_STATUS, "skb(0x%p) NOT cloned", skb);
 */
 
-/* Drop du en-tête rtp ici */
+/* Test du en-tête rtp ici */
 
 	format = info->flags & XT_MPEG2TS_FORMAT; //Flag le format du rtp
 	if (format == XT_MPEG2TS_FORMAT_AUTO || format == XT_MPEG2TS_FORMAT_RTP) {
 		rtp_hdr_size = get_rtp_header_length(payload_ptr, payload_len); //Appel de la fonction défini a la lg 1150
-		if (!rtp_hdr_size) {
+		if (!rtp_hdr_size) { //Si l'en-tête n'est pas au format rtp
 			if (format == XT_MPEG2TS_FORMAT_RTP)
 				return false;
 		} else {
@@ -1288,13 +1288,13 @@ xt_mpeg2ts_match(const struct sk_buff *skb, struct xt_action_param *par)
 		res = true;
 	} else {
 		skips =	dissect_mpeg2ts(payload_ptr, payload_len,
-					skb, uh, info);
+					skb, uh, info); // Appel de dissect_mpeg2ts lg 1050
 	}
 
-	if (info->flags & XT_MPEG2TS_MATCH_DROP)
+	if (info->flags & XT_MPEG2TS_MATCH_DROP) //Si le flag MATCH_DROP est a 1
 		res = !!(skips); /* Convert to a bool */
 
-	return res;
+	return res; //Retour du bool
 }
 
 
