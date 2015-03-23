@@ -390,7 +390,7 @@ struct xt_rule_mpeg2ts_conn_htable {
 static bool
 mpeg2ts_htable_create(struct xt_mpeg2ts_mtinfo *minfo)
 {
-	struct xt_rule_mpeg2ts_conn_htable *hinfo;
+	struct xt_rule_mpeg2ts_conn_htable *hinfo; //lg 343
 	unsigned int hash_buckets;
 	unsigned int hash_struct_sz;
 	char rule_name[IFNAMSIZ+5];
@@ -615,7 +615,7 @@ mpeg2ts_pid_destroy_list(struct mpeg2ts_stream *stream)
 	return stream->pid_list_len;
 }
 
-static struct mpeg2ts_stream *
+static struct mpeg2ts_stream * //Return une structure mpeg2ts_stream
 mpeg2ts_stream_alloc_init(struct xt_rule_mpeg2ts_conn_htable *ht,
 			  const struct mpeg2ts_stream_match *match)
 {
@@ -660,12 +660,12 @@ mpeg2ts_stream_alloc_init(struct xt_rule_mpeg2ts_conn_htable *ht,
 	size = entry_sz = sizeof(*entry);
 	/* msg_info(IFUP, "Alloc new stream entry (%d bytes)", entry_sz); */
 
-	entry = kzalloc(entry_sz, GFP_ATOMIC);
+	entry = kzalloc(entry_sz, GFP_ATOMIC); //Allocation de mémoire
 	if (!entry) {
 		msg_err(DRV, "can't allocate new stream elem");
 		return NULL;
 	}
-	memcpy(&entry->match, match, sizeof(entry->match));
+	memcpy(&entry->match, match, sizeof(entry->match)); 
 
 	spin_lock_init(&entry->lock);
 	atomic_set(&entry->use, 1);
@@ -1029,13 +1029,13 @@ dissect_mpeg2ts(const unsigned char *payload_ptr, uint16_t payload_len,
 	int skips  = 0;
 	int skips_total = 0;
 	int discontinuity = 0;
-	const struct iphdr *iph = ip_hdr(skb);
+	const struct iphdr *iph = ip_hdr(skb); //Extraction du header IP - Paramètre sk_buff *skb
 	
 	struct mpeg2ts_stream     *stream; /* "Connection" voir lg 297 */
 	struct mpeg2ts_stream_match match; // Data to match a stream / connection (src-dest address) voir lg 289 
 
-	struct xt_rule_mpeg2ts_conn_htable *hinfo;
-	hinfo = info->hinfo;
+	struct xt_rule_mpeg2ts_conn_htable *hinfo; //Voir ligne 343 (Keeping track of the MPEG2 streams per iptables rule)
+	hinfo = info->hinfo; //Paramètre struct xt_mpeg2ts_mtinfo *info
 
 	/** Lookup stream data structures **/
 
@@ -1051,7 +1051,7 @@ dissect_mpeg2ts(const unsigned char *payload_ptr, uint16_t payload_len,
 	
 	stream = mpeg2ts_stream_find(hinfo, &match);
 	if (!stream) {
-		stream = mpeg2ts_stream_alloc_init(hinfo, &match);
+		stream = mpeg2ts_stream_alloc_init(hinfo, &match); //Allocation d'un stream a un process /voir lg 619
 		if (!stream) {
 			/* spin_unlock_bh(&hinfo->lock); // Replaced by RCU */
 			rcu_read_unlock_bh();
@@ -1059,7 +1059,7 @@ dissect_mpeg2ts(const unsigned char *payload_ptr, uint16_t payload_len,
 		}
 		/* msg_info(RX_STATUS, */
 		printk(KERN_INFO
-		       "Rule:%u New stream (%pI4 -> %pI4)\n",
+		       "Rule:%u New stream (%pI4 -> %pI4)\n", //Voir printk pour la sortie
 		       hinfo->id, &iph->saddr, &iph->daddr);
 	}
 
