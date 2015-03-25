@@ -703,7 +703,7 @@ mpeg2ts_stream_alloc_init(struct xt_rule_mpeg2ts_conn_htable *ht,
  *Régles additionelles de match (voir structure statique xt_match ipaddr_mt_reg __read_mostly lg 1300)
  *
  */
- 
+  
 static int
 xt_mpeg2ts_mt_check(const struct xt_mtchk_param *par)
 {
